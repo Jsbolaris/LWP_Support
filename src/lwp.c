@@ -3,11 +3,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-/* double linked list of all the threads*/
-thread LWP_list = NULL;
+
 thread current_thread = NULL; // current thread pointer
 
 int thread_count = 1;
+
+struct scheduler rr_publish = {NULL, NULL, rr admit, rr remove, rr next, rr qlen};
+scheduler RoundRobin = &rr publish;
+
+
+
 
 /* static struct scheduler rr_publish = {NULL, NULL};
 
@@ -18,41 +23,41 @@ int thread_count = 1;
  * 
 */
 tid_t lwp_create(lwpfun func, void *arg){
-    unsigned long *stack;
-    thread new_thread 
-    
-    new_thread = malloc(sizeof(context));
-
+    long page_size = sysconf(_SC_PAGESIZE);
     if(!new_thread){
         perror("lwp_create");
-        return (tid_t)-1;
+        return (tid_t)-1; //return previous thread
     }
+    //getting stack size using rlimit
+    struct rlimit limit;
+    getrlimit(RLIMIT_STACK, &limit);
+    long stack_limit = limit.rlim_cur;
+
+    //rounding to page size
+    stack_limit = (stack_limit + page_size - 1) / page_size * page_size;
     // Allocate stack using mmap
-    size_t stack_size = allocate_stack(stack_size);
-    //allocate size for the stack base 1mb
-    tmp->stacksize = stack_size
-
-    //set id
-    tmp->tid = thread_count++;
-
-
-    return tmp->tid;
-    
-}
-
-void* allocate_stack(size_t stack_size) {
-    // Ensure the stack size is aligned to the page size
-    long page_size = sysconf(_SC_PAGESIZE);
-    stack_size = (stack_size + page_size - 1) / page_size * page_size; // Round up to nearest page size
-    void* stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+    void* stack = mmap(NULL, stack_limit, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
     if (stack == MAP_FAILED) {
         perror("mmap");
         return NULL; // mmap failed
     }
+    //set stack size
+    new_thread->stacksize = stack_limit;
+    //set stack pointer to mmap result
+    new_thread->stack_pointer = stack;
+    //set id
+    new_thread->tid = thread_count++;
+    new_thread->stack_pointer = stack;
 
-    return stack;
+
+    return new_thread->tid;
+    
 }
 
+p_start(void){
+
+    //change the stack pointer
+}
 
 void lwp_yield(void){
     thread tmp;
