@@ -27,22 +27,6 @@ void log_linked_list(void) {
 }
 
 
-static void rr_init(void) {
-    rr_list_head = NULL; // Initialize the list head
-}
-
-static void rr_shutdown(void) {
-    // Clean up the thread list if necessary
-    thread current = rr_list_head;
-    while (current != NULL) {
-        thread next = current->lib_one;
-        free(current);
-        current = next;
-    }
-    rr_list_head = NULL;
-}
-
-
 static void rr_admit(thread new) {
     new->lib_one = NULL;  // Initially, no next thread.
     if (rr_list_head == NULL) {
@@ -111,13 +95,17 @@ static struct scheduler rr_publish = {
 static scheduler current_scheduler = &rr_publish;
 
 int thread_count = 0;
-
+//helper function for lwp_create
+static void lwp_wrap(lwpfun fun, void *arg){
+    int rval;
+    rval=fun(arg);
+    lwp_exit(rval);
+}
 /* static struct scheduler rr_publish = {NULL, NULL};
 
-/**
+/*
  * @param func thread to run
  * @param arg the arguments of the function
- * 
 */
 tid_t lwp_create(lwpfun func, void *arg){
     long page_size = sysconf(_SC_PAGESIZE);
@@ -141,7 +129,7 @@ tid_t lwp_create(lwpfun func, void *arg){
     void* stack = mmap(NULL, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
     if (stack == MAP_FAILED) {
         perror("mmap");
-        return NULL; // mmap failed
+        return (tid_t) -1; // mmap failed
     }
     //set stack size
     new_thread->stacksize = stack_size;
@@ -159,6 +147,8 @@ tid_t lwp_create(lwpfun func, void *arg){
     current_scheduler->admit(new_thread);
     return new_thread->tid;
 }
+
+
 
 void lwp_start(void){
     void lwp_start(void) {
@@ -184,10 +174,10 @@ void lwp_start(void){
 }
 
 void lwp_yield(void){
-
-
     thread prev_thread = current_thread;
-    //save context
+    thread next_thread = current_scheduler->next();
+    //save context and swap to next thread
+
     swap_rfiles(&(prev_thread->state), &(current_thread->state));
 
 }
@@ -195,14 +185,8 @@ void lwp_yield(void){
 
 void lwp_exit(int status){
     current_scheduler->remove(current_thread);
-
 }
 
-static void lwp_wrap(lwpfun fun, void *arg){
-    int rval;
-    rval=fun(arg);
-    lwp_exit(rval);
-}
 
 
 //test function
@@ -211,10 +195,8 @@ void thread_func(void *arg){
 }
 
 
+
 int main(){
-    if (current_scheduler->init){
-        current_scheduler->init();
-    }
     tid_t new_tid = lwp_create(thread_func,(void*)0x1234);
     if (new_tid == (tid_t)-1) {
         perror("Failed to create thread");
