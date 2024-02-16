@@ -1,4 +1,3 @@
-
 #ifdef __APPLE__
 	#define FNAME _swap_rfiles
 #else				/* everyone else */
