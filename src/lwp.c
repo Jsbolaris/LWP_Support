@@ -17,7 +17,6 @@
 
 static thread thread_list = NULL;
 static thread current_thread = NULL;
-static thread dead_threads = NULL;
 static thread rr_list_head = NULL;
 
 // Round-Robin Scheduler Functions
@@ -40,14 +39,11 @@ void debug_print_queue() {
 static void rr_admit(thread new_thread) { 
     if (rr_list_head == NULL) {
         rr_list_head = new_thread;
-        new_thread->lib_one = new_thread; // Points to itself, forming a circular list
-        //debug_print_queue();
+        new_thread->lib_one = new_thread;
     } else {
         // Insert the new thread before the head to avoid traversing the list
         new_thread->lib_one = rr_list_head->lib_one;
         rr_list_head->lib_one = new_thread;
-        rr_list_head = new_thread; // Optional: Update the head to keep the newest thread at the front
-        //debug_print_queue();
     }
 }
 
@@ -66,7 +62,6 @@ static void rr_remove(thread victim) {
                 rr_list_head = (victim->lib_one == victim) ? NULL : victim->lib_one;
             }
             victim->lib_one = NULL; // Clear to prevent accidental reuse
-            //debug_print_queue();
             return;
         }
         prev = prev->lib_one;
@@ -80,7 +75,6 @@ static thread rr_next(void) {
     if (rr_list_head == NULL || rr_list_head->lib_one == rr_list_head) {
         return NULL; // Return NULL if the list is empty or contains only one thread
     }
-
     rr_list_head = rr_list_head->lib_one; // Rotate the head to simulate round-robin behavior
     return rr_list_head;
 }
@@ -239,7 +233,6 @@ tid_t lwp_wait(int *status) {
             prev = current;
             current = current->lib_one; // Move to the next thread in the list.
         }
-        DEBUG_PRINT("Current length of q: %d \n", current_scheduler->qlen());
         // If only the initial thread is left, exit the loop.
         if (current_scheduler->qlen() <= 1) {
             break;
